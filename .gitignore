@@ -1,0 +1,6 @@
+config.json
+Quotes.txt
+memberIDs.txt
+runBot.bat
+package-lock.json
+**/node_modules

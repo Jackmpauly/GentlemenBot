@@ -16,11 +16,8 @@ const msgCooldown = new Set()
 // COOLDOWN TIMES
 const muteTime              = ms('10s')
 const defaultCooldownTime   = ms('1h')
-const handicapCooldownTime    = ms('30m')
+const handicapCooldownTime  = ms('30m')
 let cooldownTime            = defaultCooldownTime
-
-// TOKEN (HIDE THIS AT ALL COSTS)
-//const token = 'NzI4MTQ1ODIxMTE5MjgzMjEw.Xv5rUw.iY1enRu3j0KrfO9aOJ3ElgdbFLk'
 
 const PREFIX = '$'
 const PREFIX_ALT = '£'
@@ -241,7 +238,9 @@ client.on('message', message=>{
             break
         
         case 'theycallme':
-            response = 'They call me '+args[1]+' Pauly'
+            if( args[1] ){
+                response = 'They call me '+args[1]+' Pauly'
+            }
             break
 
         case 'logs':
