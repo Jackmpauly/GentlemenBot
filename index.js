@@ -7,26 +7,22 @@ const fs = require('fs')
 const { REPL_MODE_SLOPPY } = require('repl')
 
 // COOLDOWN SETS
-const muteCooldown = new Set()
-const muteList     = new Set()
-const bootCooldown = new Set()
-const nickCooldown = new Set()
-const msgCooldown = new Set()
+const muteCooldown = new Map()
+const muteList     = new Map()
+const bootCooldown = new Map()
+const nickCooldown = new Map()
+const msgCooldown = new Map()
 
 // COOLDOWN TIMES
-const muteTime              = ms('10s')
-const defaultCooldownTime   = ms('1h')
-const handicapCooldownTime  = ms('30m')
+const defaultCooldownTime   = ms(config.defaultCooldownTime)
+const handicapCooldownTime  = ms(config.handicapCooldownTime)
 let cooldownTime            = defaultCooldownTime
 
-const PREFIX = '$'
-const PREFIX_ALT = '£'
 var textToSpeech = false
 
 var quotesList_Dict = {}
-var logs = ""
 
-var logUpdateCount = 0
+var logsArray = []
 var memberIDs_Dict = {}
 
 function getMemberIDs(){
@@ -45,7 +41,7 @@ function getMemberIDs(){
 
 getMemberIDs()
 
-function newRefresh(){
+function refresh(){
     fs.readFile(config.quotesTxt, 'utf8', (err, data) => {
         if(err) throw err;
         var text = data.toString().split('\n')
@@ -56,41 +52,46 @@ function newRefresh(){
         }
 
     })
-    logs = "";
+    console.clear() // Clears console to avoid issues with communicating with the imgur server, for some reason
 }
 
-newRefresh()
+refresh()
 
 
-// Function to update the logs in the console and in the logs string
+// Function to log the commands in the console and add to logsArray
+// Also cuts logsArray to only include the last 10 entries
 function updateLogs(logText){
-    logUpdateCount++;
-    if(logUpdateCount >= 10){
-        logs = "";
-        logUpdateCount = 0;
-    }
-    logs += logText+"\n";
-    
-    console.log(logText);
+    logsArray[ logsArray.length ] = logText
+    logsArray = logsArray.slice( Math.max(logsArray.length - 10, 0) )
+    console.log(logText)
+}
+
+// Calculates the difference between 2 dates in minutes 
+function diff_minutes(dt1, dt2){
+    var diff = (dt2.getTime() - dt1.getTime() ) / 1000
+    diff /= 60
+
+    return Math.abs( Math.round(diff) )
 }
 
 
 client.on('ready', () =>{
     THEGENTLEMEN_GUILD = client.guilds.cache.get(config.guild)
-    client.user.setActivity(config.botActivity, { type: 4})
-
-    let datetime = new Date().toLocaleString()
+    client.user.setActivity(config.botActivity, { type: config.botActivityType })
+    
+    let datetime = (new Date()).toLocaleString()
     datetime+=": "
-    let logString = datetime.padEnd(27, " ")+'Bot online'
 
-    updateLogs(logString)
+    updateLogs( datetime.padEnd(27, " ")+'Bot online' )
 })
 
 
 client.on('message', message=>{
     let M_AUTHOR = message.author;
     let args = "null"
-    if( message.content.charAt(0) == PREFIX || message.content.charAt(0) == PREFIX_ALT){
+    cooldownTime = defaultCooldownTime
+    let messageTarget = ""
+    if( message.content.charAt(0) == config.prefix || message.content.charAt(0) == config.prefixALT){
         args = message.content.substring(1).split(" ")
     }
 
@@ -101,21 +102,28 @@ client.on('message', message=>{
         let datetime = new Date().toLocaleString()
         datetime+=": "
         let logString = ""
-        logString+=( datetime.padEnd(27, " ") )+ "@"+M_AUTHOR.username +" called: $" + args[0];
+        logString+=( datetime.padEnd(27, " ") )+ "@"+M_AUTHOR.username +" called: "+ message.content.charAt(0) + args[0];
+        
+        if( messageTarget!="" ){logString+=" on \'"+messageTarget+"\'"}
+        
         updateLogs(logString)
     }
 
     // Function that takes in an array and an index, spits out a string
-    function sayQuote(arrayText, quoteIndex){
+    function sayQuote(arrayText, sayQuoteArg, quoteSetName){
         var resp = 0
 
-        if( !quoteIndex || ((quoteIndex-1) >= arrayText.length) || ((quoteIndex-1) < 0) ){
-            resp = Math.floor(Math.random() * arrayText.length)
+        if( quoteSetName == config.customSentenceKey && !Number.isInteger( parseInt(sayQuoteArg) ) && sayQuoteArg!=undefined ){
+            return config.customSentenceHead + sayQuoteArg + config.customSentenceTail
         }else{
-            resp = quoteIndex-1;
+            let quoteIndex = parseInt(sayQuoteArg)
+            if( !quoteIndex || ((quoteIndex-1) >= arrayText.length) || ((quoteIndex-1) < 0) ){
+                resp = Math.floor(Math.random() * arrayText.length)
+            }else{
+                resp = quoteIndex-1;
+            }
+            return arrayText[resp];
         }
-        return arrayText[resp];
-
     }
 
     // Function that takes in a discord user ID and a message, then sends message
@@ -156,7 +164,7 @@ client.on('message', message=>{
 
     // Checks if user is a mod. If user is a mod, return true
     function hasModImmunity(targetPerson){
-        if( isRole(targetPerson, config.adminRole) || isRole(targetPerson, "GentlemenBot") || isRole(targetPerson, config.coAdminRole)){
+        if( isRole(targetPerson, config.adminRole) || isRole(targetPerson, config.botRole) || isRole(targetPerson, config.coAdminRole)){
             message.channel.send(':x: you can\'t do that to him, he\'s built different')
             return true
         }
@@ -193,12 +201,14 @@ client.on('message', message=>{
         return targetName
     }
 
-    // Takes in a discord user, the Set they should be added to, the time they should stay in the set, and starts the cooldown for using a command
+    // Takes in a discord user, the Map they should be added to, the time they should stay in the set, and starts the cooldown for using a command
+    // Maps the user to a date when the user is released from the set
     function startCoolDown(target, cooldownSet, time){
         if( cooldownSet.has( target.id ) ){
             cooldownSet.delete( target.id )
         }
-        cooldownSet.add( target.id )
+        cooldownSet.set( target.id, new Date( (new Date()).getTime() + time) )
+        // console.log( cooldownSet.get(target.id).toLocaleString() )
         setTimeout(() => {
             // Removes the target from the set after time
             cooldownSet.delete( target.id )
@@ -206,19 +216,33 @@ client.on('message', message=>{
 
     }
 
+    // Use diff_minutes to print the time left in a user-friendly, readable format 
+    function getTimeLeft(target, cooldownSet){
+        let temp = diff_minutes( new Date(), cooldownSet.get(target.id) )
+        let ret = ""
+        if(temp == 0){
+            ret = "less than 1 minute left"
+        }else if(temp == 1){
+            ret = "1 minute left"
+        }else{
+            ret = temp+" minutes left"
+        }
+        return ret;
+    }
+
     // Takes in a discord user, sets their voicestatus to server muted, adds them to a list of people muted, then removes them after 10 seconds
     function serverTempMute(target){
         target.voice.setMute(true)
-        muteList.add( target.id )
-        message.channel.send( getTargetName(target)+' has been server muted for 10 seconds')
+        muteList.set( target.id, new Date() )
+        message.channel.send( '\''+getTargetName(target)+'\' has been server muted for 10 seconds')
 
         setTimeout(function(){
             if( target.voice.channel ){
                 target.voice.setMute(false)
                 muteList.delete( target.id )
-                message.channel.send( getTargetName(target)+' has been unmuted')
+                message.channel.send( '\''+getTargetName(target)+'\' has been unmuted')
             }
-        }, muteTime)
+        }, ms('10s') )
 
         logActivity()
     }
@@ -236,14 +260,42 @@ client.on('message', message=>{
                 response = 'TTS is **OFF**'
             }
             break
-        
-        case 'theycallme':
-            if( args[1] ){
-                response = 'They call me '+args[1]+' Pauly'
+
+        // Prints the user's cooldowns
+        case 'cd':
+        case 'cooldown':
+            let str = ""
+            let hasCD = false
+            if( muteCooldown.has(M_AUTHOR.id) ){
+                str+= "$mute: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, muteCooldown)+"\n"
+                hasCD = true
             }
+            if( bootCooldown.has(M_AUTHOR.id) ){
+                str+= "$boot: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, bootCooldown)+"\n"
+                hasCD = true
+            }
+            if( nickCooldown.has(M_AUTHOR.id) ){
+                str+= "$setNick: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, nickCooldown)+"\n"
+                hasCD = true
+            }
+            if( msgCooldown.has(M_AUTHOR.id) ){
+                str+= "$message: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, msgCooldown)+"\n"
+                hasCD = true
+            }
+
+            if(hasCD){
+                response = "`"+str+"`"
+            }else{
+                response = ":x: User doesn't have any cooldowns. Go nuts"
+            }
+
             break
 
         case 'logs':
+            let logs = ""
+            for(let i=0; i<logsArray.length; ++i){
+                logs+=logsArray[i]+"\n"
+            }
             response = "`"+logs+"`"
             break
 
@@ -262,7 +314,7 @@ client.on('message', message=>{
 
             //Check if user calling $message used $message recently
             if( msgCooldown.has(M_AUTHOR.id) ){
-                message.channel.send(":x: You must wait before using $message again. (cooldown 2 min)")
+                message.channel.send(":x: You must wait "+ getTimeLeft(M_AUTHOR, msgCooldown) +" before using $message again")
                 break
             }
 
@@ -285,6 +337,7 @@ client.on('message', message=>{
             for(var k in memberIDs_Dict){
                 if( args[1] == k || args[1] == "@"+k){
                     foundUser = true
+                    messageTarget = k
                     sendDM(memberIDs_Dict[k], messageToSend)
                     response = "Message sent!"
                 }
@@ -292,7 +345,7 @@ client.on('message', message=>{
 
             // If the message recipient didn't match anyone in the registry, send error message
             if( !foundUser ){
-                response = ":x: could\'t find user with that name"
+                response = ":x: could\'t find user with that name. The bot goes off names, not @'s"
                 break
             }
 
@@ -306,7 +359,7 @@ client.on('message', message=>{
             if( !hasMentions() ){break}
 
             if( muteCooldown.has(M_AUTHOR.id) ){
-                response = ":x: You must wait before using $mute again."
+                response = ":x: You must wait "+ getTimeLeft(M_AUTHOR, muteCooldown) +" before using $mute again."
                 break
             }
 
@@ -315,7 +368,9 @@ client.on('message', message=>{
             if( hasModImmunity(personToMute) ){break}
             if( !isInCall(personToMute) ) {break}
 
+            messageTarget = getTargetName(personToMute)
             serverTempMute(personToMute)
+            
             
             startCoolDown(M_AUTHOR, muteCooldown, cooldownTime)
             break;
@@ -327,7 +382,7 @@ client.on('message', message=>{
             if( !hasMentions() ){break}
             
             if ( bootCooldown.has(M_AUTHOR.id) ){
-                response = ":x: You must wait before using $boot again."
+                response = ":x: You must wait "+ getTimeLeft(M_AUTHOR, bootCooldown) +" before using $boot again."
                 break
             }
 
@@ -336,13 +391,15 @@ client.on('message', message=>{
             if( hasModImmunity(personToBoot) ){break}
             if( !isInCall(personToBoot) ){break}
 
+            messageTarget = getTargetName(personToBoot)
             personToBoot.voice.setMute(false)
             personToBoot.voice.setChannel(null)
-            response = 'bye bye '+ getTargetName(personToBoot)+' !!'
+            response = 'bye bye \''+ getTargetName(personToBoot)+'\' !!'
 
             startCoolDown(M_AUTHOR, bootCooldown, cooldownTime)
             break
 
+        case 'setnick':
         case 'setNick':
             // Check if the user is in a server for this command to work
             if( !messageSentInGuild() ){break}
@@ -360,9 +417,7 @@ client.on('message', message=>{
             }
 
             fullNickName=fullNickName.trim()
-
-            // Prints full Nickname to console
-            // console.log(fullNickName);
+            
             if( fullNickName=="" ){
                 message.channel.send(":x: You must specify the target's new name")
                 break
@@ -373,13 +428,15 @@ client.on('message', message=>{
             }
             // Check if user calling $setNick used $setNick recently
             if ( nickCooldown.has(M_AUTHOR.id) ){
-                message.channel.send(":x: You must wait before using $setNick again.")
+                message.channel.send(":x: You must wait "+ getTimeLeft(M_AUTHOR, nickCooldown) +" before using $setNick again.")
                 break
             }
 
             let personToChange = message.guild.member( message.mentions.users.first() )
 
-            if( isRole(message.member, "GentlemenBot") || isRole(message.member, config.adminRole) ){break}
+            if( isRole(personToChange, config.botRole) || isRole(personToChange, config.adminRole) ){break}
+
+            messageTarget = `${personToChange.user.tag}`
 
             let OGNickName = getTargetName(personToChange)
             personToChange.setNickname( fullNickName )
@@ -405,6 +462,8 @@ client.on('message', message=>{
 
             break;
         case 'test':
+            console.log( muteCooldown )
+            // TODO: figure out how to make a discord embedded message. Those are cool
             // const ListEmbed = new Discord.MessageEmbed()
             // .setTitle('Users with the Gentlemen role:')
             // .setDescription(message.guild.roles.cache.get('693608138615554098').members.map(m=>m.user.tag).join('\n'));
@@ -416,14 +475,15 @@ client.on('message', message=>{
             response = ""
             for(let key in quotesList_Dict){
                 if( args[0] == key ){
-                    response = sayQuote( quotesList_Dict[key], parseInt(args[1]) )
+                    // response = sayQuote( quotesList_Dict[key], parseInt(args[1]) )
+                    response = sayQuote( quotesList_Dict[key], args[1], args[0] )
                     break
                 }
             }
             break
     }
 
-    if(!(response==="") ){
+    if(!(response=="") ){
         message.channel.send(response, {tts: textToSpeech})
         logActivity()
     }
