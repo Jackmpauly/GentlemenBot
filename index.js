@@ -11,7 +11,7 @@ const muteCooldown = new Map()
 const muteList     = new Map()
 const bootCooldown = new Map()
 const nickCooldown = new Map()
-const msgCooldown = new Map()
+const msgCooldown  = new Map()
 
 // COOLDOWN TIMES
 const defaultCooldownTime   = ms(config.defaultCooldownTime)
@@ -89,7 +89,6 @@ client.on('ready', () =>{
 client.on('message', message=>{
     let M_AUTHOR = message.author;
     let args = "null"
-    cooldownTime = defaultCooldownTime
     let messageTarget = ""
     if( message.content.charAt(0) == config.prefix || message.content.charAt(0) == config.prefixALT){
         args = message.content.substring(1).split(" ")
@@ -112,18 +111,32 @@ client.on('message', message=>{
     // Function that takes in an array and an index, spits out a string
     function sayQuote(arrayText, sayQuoteArg, quoteSetName){
         var resp = 0
+        var sayQuotereply
 
-        if( quoteSetName == config.customSentenceKey && !Number.isInteger( parseInt(sayQuoteArg) ) && sayQuoteArg!=undefined ){
-            return config.customSentenceHead + sayQuoteArg + config.customSentenceTail
-        }else{
-            let quoteIndex = parseInt(sayQuoteArg)
-            if( !quoteIndex || ((quoteIndex-1) >= arrayText.length) || ((quoteIndex-1) < 0) ){
-                resp = Math.floor(Math.random() * arrayText.length)
-            }else{
-                resp = quoteIndex-1;
+        if( !Number.isInteger( parseInt(sayQuoteArg) ) && sayQuoteArg!=undefined ){
+            if( sayQuoteArg == "length" ){
+                return "*"+arrayText.length+"*";
             }
-            return arrayText[resp];
+            if( quoteSetName == config.customSentenceKey ){
+                return config.customSentenceHead + sayQuoteArg + config.customSentenceTail
+            }
         }
+        
+        let quoteIndex = parseInt(sayQuoteArg)
+        if( !quoteIndex || ((quoteIndex-1) >= arrayText.length) || ((quoteIndex-1) < 0) ){
+            resp = Math.floor(Math.random() * arrayText.length)
+        }else{
+            resp = quoteIndex-1;
+        }
+        sayQuotereply = arrayText[resp];
+        // Account for new lines
+        while( sayQuotereply.includes("\\n") ){
+            sayQuotereply = sayQuotereply.replace("\\n", "\n")
+        }
+        // if( arrayText[resp].includes("\\n") ){
+        //     sayQuotereply = arrayText[resp].replace("\\n", "\n")
+        // }
+        return sayQuotereply;
     }
 
     // Function that takes in a discord user ID and a message, then sends message
@@ -145,11 +158,7 @@ client.on('message', message=>{
 
     // Takes in a discord user and a role name. Checks if user has that role
     function isRole(identifier, roleName){
-        if( identifier.roles.cache.some(r => r.name === roleName) ){
-            return true
-        }else{
-            return false
-        }
+        return ( identifier.roles.cache.some(r => r.name === roleName) )
     }
 
     // Checks if discord user's number of roles. If they have zero roles, return false and send message
@@ -180,7 +189,7 @@ client.on('message', message=>{
         }
     }
 
-    // Checks to see if the message mentioned anyone. If 
+    // Checks to see if the message mentioned anyone.
     function hasMentions(){
         if(message.mentions.members.size <= 0){
             message.channel.send(':x: You must mention someone for this command to work')
@@ -247,6 +256,11 @@ client.on('message', message=>{
         logActivity()
     }
 
+    // Quiet, Dad bot!
+    if( M_AUTHOR.id === config.autoReplyID){
+        message.channel.send(config.autoReplyContent + `${M_AUTHOR}`);
+    }
+
     // SWITCH CASE FOR COMMANDS
     switch(args[0]){
 
@@ -265,32 +279,40 @@ client.on('message', message=>{
         case 'cd':
         case 'cooldown':
             let str = ""
-            let hasCD = false
             if( muteCooldown.has(M_AUTHOR.id) ){
                 str+= "$mute: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, muteCooldown)+"\n"
-                hasCD = true
             }
             if( bootCooldown.has(M_AUTHOR.id) ){
                 str+= "$boot: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, bootCooldown)+"\n"
-                hasCD = true
             }
             if( nickCooldown.has(M_AUTHOR.id) ){
                 str+= "$setNick: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, nickCooldown)+"\n"
-                hasCD = true
             }
             if( msgCooldown.has(M_AUTHOR.id) ){
                 str+= "$message: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, msgCooldown)+"\n"
-                hasCD = true
             }
 
-            if(hasCD){
+            if(str!=""){
                 response = "`"+str+"`"
             }else{
                 response = ":x: User doesn't have any cooldowns. Go nuts"
             }
 
             break
+        case config.customMiscCommand:
+            let customString = config.customMiscCommandString
+            
+            let argument = "";
+            for(let i=1; i<args.length; i++){
+                argument+=args[i]+" "
+            }
 
+            if( argument=="" ){
+                argument = config.defaultMiscCommandArg;
+            }
+
+            response = customString + argument + "!"
+            break
         case 'logs':
             let logs = ""
             for(let i=0; i<logsArray.length; ++i){
@@ -306,7 +328,7 @@ client.on('message', message=>{
             refresh()
             break
         
-        // THE MUTE / BOOT / BLACKLIST / MESSAGE COMMANDS
+        // THE MESSAGE / MUTE / BOOT / SETNICK COMMANDS
         case 'message':
             cooldownTime = ms('2m')
             let messageToSend = ""
@@ -434,7 +456,10 @@ client.on('message', message=>{
 
             let personToChange = message.guild.member( message.mentions.users.first() )
 
-            if( isRole(personToChange, config.botRole) || isRole(personToChange, config.adminRole) ){break}
+            if( isRole(personToChange, config.botRole) || isRole(personToChange, config.adminRole) ){
+                message.channel.send(':x: you can\'t do that to him, he\'s built different')
+                break
+            }
 
             messageTarget = `${personToChange.user.tag}`
 
@@ -462,7 +487,6 @@ client.on('message', message=>{
 
             break;
         case 'test':
-            console.log( muteCooldown )
             // TODO: figure out how to make a discord embedded message. Those are cool
             // const ListEmbed = new Discord.MessageEmbed()
             // .setTitle('Users with the Gentlemen role:')
