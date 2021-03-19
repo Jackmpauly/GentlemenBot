@@ -133,9 +133,6 @@ client.on('message', message=>{
         while( sayQuotereply.includes("\\n") ){
             sayQuotereply = sayQuotereply.replace("\\n", "\n")
         }
-        // if( arrayText[resp].includes("\\n") ){
-        //     sayQuotereply = arrayText[resp].replace("\\n", "\n")
-        // }
         return sayQuotereply;
     }
 
@@ -143,7 +140,7 @@ client.on('message', message=>{
     function sendDM(messageRecipient, messageContent){
         client.users.fetch( messageRecipient ).then((user) => {
             user.send(messageContent);
-        });
+        }).catch(console.error);
     }
 
     // Checks if the message was sent in a guild. If it was, return true, else false
@@ -487,6 +484,14 @@ client.on('message', message=>{
 
             break;
         case 'test':
+            // console.log("test")
+            
+            // let bottestServer = client.guilds.cache.get('728390008607735868');
+            
+            // console.log(THEGENTLEMEN_GUILD.id);
+            
+            // response = `${THEGENTLEMEN_GUILD.name}`;
+
             // TODO: figure out how to make a discord embedded message. Those are cool
             // const ListEmbed = new Discord.MessageEmbed()
             // .setTitle('Users with the Gentlemen role:')
@@ -500,14 +505,14 @@ client.on('message', message=>{
             for(let key in quotesList_Dict){
                 if( args[0] == key ){
                     // response = sayQuote( quotesList_Dict[key], parseInt(args[1]) )
-                    response = sayQuote( quotesList_Dict[key], args[1], args[0] )
+                    response = sayQuote( quotesList_Dict[key], args[1], key )
                     break
                 }
             }
             break
     }
 
-    if(!(response=="") ){
+    if( response!="" ){
         message.channel.send(response, {tts: textToSpeech})
         logActivity()
     }
