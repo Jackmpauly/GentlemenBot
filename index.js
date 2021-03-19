@@ -1,5 +1,5 @@
 const Discord = require('discord.js')
-const config = require('./config.json')
+const config = require('./config.json') // On Github, this should be replaced by config2.json
 const client = new Discord.Client()
 
 const ms = require('ms')
