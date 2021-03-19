@@ -485,12 +485,6 @@ client.on('message', message=>{
             break;
         case 'test':
             // console.log("test")
-            
-            // let bottestServer = client.guilds.cache.get('728390008607735868');
-            
-            // console.log(THEGENTLEMEN_GUILD.id);
-            
-            // response = `${THEGENTLEMEN_GUILD.name}`;
 
             // TODO: figure out how to make a discord embedded message. Those are cool
             // const ListEmbed = new Discord.MessageEmbed()
@@ -504,7 +498,6 @@ client.on('message', message=>{
             response = ""
             for(let key in quotesList_Dict){
                 if( args[0] == key ){
-                    // response = sayQuote( quotesList_Dict[key], parseInt(args[1]) )
                     response = sayQuote( quotesList_Dict[key], args[1], key )
                     break
                 }
