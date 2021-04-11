@@ -28,9 +28,5 @@
     "memberIDsTxt": "SampleMemberIDs.txt",
     "quotesTxt": "SampleCommands.txt",
     
-    "defaultDMMessage": "help",
-
-    "customSentenceKey": "jack",
-    "customSentenceHead": "They call me ",
-    "customSentenceTail": " Pauly"
+    "defaultDMMessage": "help"
 }

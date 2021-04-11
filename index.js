@@ -12,6 +12,7 @@ const muteList     = new Map()
 const bootCooldown = new Map()
 const nickCooldown = new Map()
 const msgCooldown  = new Map()
+const rollCooldown = new Map()
 
 // COOLDOWN TIMES
 const defaultCooldownTime   = ms(config.defaultCooldownTime)
@@ -82,7 +83,7 @@ client.on('ready', () =>{
     let datetime = (new Date()).toLocaleString()
     datetime+=": "
 
-    updateLogs( datetime.padEnd(27, " ")+'Bot online' )
+    updateLogs( `${datetime.padEnd(27, " ")} Bot online` )
 })
 
 
@@ -101,7 +102,7 @@ client.on('message', message=>{
         let datetime = new Date().toLocaleString()
         datetime+=": "
         let logString = ""
-        logString+=( datetime.padEnd(27, " ") )+ "@"+M_AUTHOR.username +" called: "+ message.content.charAt(0) + args[0];
+        logString+=`${datetime.padEnd(27, " ")} @${M_AUTHOR.username} called: ${message.content.charAt(0)}${args[0]}`;
         
         if( messageTarget!="" ){logString+=" on \'"+messageTarget+"\'"}
         
@@ -112,28 +113,72 @@ client.on('message', message=>{
     function sayQuote(arrayText, sayQuoteArg, quoteSetName){
         var resp = 0
         var sayQuotereply
-
+        let quoteIndex
         if( !Number.isInteger( parseInt(sayQuoteArg) ) && sayQuoteArg!=undefined ){
             if( sayQuoteArg == "length" ){
-                return "*"+arrayText.length+"*";
+                return `*${arrayText.length}*`;
             }
-            if( quoteSetName == config.customSentenceKey ){
-                return config.customSentenceHead + sayQuoteArg + config.customSentenceTail
+            if( sayQuoteArg == "last" ){
+                return sayQuote( arrayText, arrayText.length, quoteSetName )
+            }
+            if( quoteSetName == "jack" ){
+                return `They call me ${sayQuoteArg} Pauly`
             }
         }
         
-        let quoteIndex = parseInt(sayQuoteArg)
+        quoteIndex = parseInt(sayQuoteArg)
         if( !quoteIndex || ((quoteIndex-1) >= arrayText.length) || ((quoteIndex-1) < 0) ){
             resp = Math.floor(Math.random() * arrayText.length)
         }else{
             resp = quoteIndex-1;
         }
         sayQuotereply = arrayText[resp];
+
         // Account for new lines
         while( sayQuotereply.includes("\\n") ){
             sayQuotereply = sayQuotereply.replace("\\n", "\n")
         }
         return sayQuotereply;
+    }
+
+
+    function roll(rollType){
+        if( !messageSentInGuild() ){return false}
+        if( !canUseBot(message.member) ){return false}
+
+        const channels = message.guild.channels.cache.filter(c => c.parentID === '419336089166413825' && c.type === 'voice');
+        let currentMembersArray = [];
+        for( const [channelID, channel] of channels ){
+            for( const [memberID, member] of channel.members){
+                currentMembersArray.push( member )
+                console.log(`Added ${member.user.tag} to list.`);
+            }
+        }
+
+        if( currentMembersArray.length == 0 ){
+            response = ":x: Nobody is in the call D:"
+            return false
+        }
+
+        if ( rollCooldown.has(M_AUTHOR.id) ){
+            response = `:x: You must wait ${getTimeLeft(M_AUTHOR, rollCooldown)} before using $${rollType} again.`
+            return false
+        }
+
+        let rand = Math.floor(Math.random() * currentMembersArray.length)
+        // console.log(`rand: ${rand}`)
+
+        if(rollType == "rollb"){
+            currentMembersArray[rand].voice.setMute(false)
+            currentMembersArray[rand].voice.setChannel(null)
+            response = `bye bye '${getTargetName(currentMembersArray[rand])}' !!`
+        }else{
+            serverTempMute(currentMembersArray[rand], '20')
+        }
+
+        startCoolDown(M_AUTHOR, rollCooldown, handicapCooldownTime)
+        // Cooldown is half of regular. This is to incentivise people to use the wacky command lol
+        return true
     }
 
     // Function that takes in a discord user ID and a message, then sends message
@@ -237,10 +282,10 @@ client.on('message', message=>{
     }
 
     // Takes in a discord user, sets their voicestatus to server muted, adds them to a list of people muted, then removes them after 10 seconds
-    function serverTempMute(target){
+    function serverTempMute(target, time){
         target.voice.setMute(true)
         muteList.set( target.id, new Date() )
-        message.channel.send( '\''+getTargetName(target)+'\' has been server muted for 10 seconds')
+        message.channel.send( `'${getTargetName(target)}' has been server muted for ${time} seconds`)
 
         setTimeout(function(){
             if( target.voice.channel ){
@@ -248,7 +293,7 @@ client.on('message', message=>{
                 muteList.delete( target.id )
                 message.channel.send( '\''+getTargetName(target)+'\' has been unmuted')
             }
-        }, ms('10s') )
+        }, ms(time+'s') )
 
         logActivity()
     }
@@ -257,6 +302,8 @@ client.on('message', message=>{
     if( M_AUTHOR.id === config.autoReplyID){
         message.channel.send(config.autoReplyContent + `${M_AUTHOR}`);
     }
+    // IDEA: make it so that on message send, if the message send was a rhythm bot command (eg: !p ) and it was sent in a channel other than #radio,
+    // redirect the user to the radio channel  
 
     // SWITCH CASE FOR COMMANDS
     switch(args[0]){
@@ -281,6 +328,9 @@ client.on('message', message=>{
             }
             if( bootCooldown.has(M_AUTHOR.id) ){
                 str+= "$boot: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, bootCooldown)+"\n"
+            }
+            if( rollCooldown.has(M_AUTHOR.id) ){
+                str+= "$roll: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, rollCooldown)+"\n"
             }
             if( nickCooldown.has(M_AUTHOR.id) ){
                 str+= "$setNick: ".padEnd(10, " ") +getTimeLeft(M_AUTHOR, nickCooldown)+"\n"
@@ -320,9 +370,35 @@ client.on('message', message=>{
 
         case 'refresh':
             if( !messageSentInGuild() ){break}
-            if( !isRole(message.member, config.adminRole) ){break}
+            if( !isRole(message.member, config.adminRole) && !isRole(message.member, config.botRole) ){break}
             response = '**~quotes refreshed~**'
             refresh()
+            break
+        
+        case 'reset':
+            if( !messageSentInGuild() ){break}
+            if( !isRole(message.member, config.adminRole) && !isRole(message.member, config.botRole) ){break}
+            response = ' :rotating_light: **~COOLDOWNS RESET~** :rotating_light: '
+            muteCooldown.clear();
+            muteList.clear();
+            bootCooldown.clear();
+            rollCooldown.clear();
+            nickCooldown.clear();
+            msgCooldown.clear();
+            break
+
+        // Make a "repeat after me" function that also deletes the message of the person who called it
+        case 'say':
+            // Create message to send. If no message body, send random $image
+            if( args[1] ){
+                for(let i=1; i<args.length; i++){
+                    response+=args[i]+" "
+                }
+            }else{
+                response = sayQuote( quotesList_Dict[config.defaultDMMessage], 0 )
+            }
+
+            message.delete()
             break
         
         // THE MESSAGE / MUTE / BOOT / SETNICK COMMANDS
@@ -333,13 +409,13 @@ client.on('message', message=>{
 
             //Check if user calling $message used $message recently
             if( msgCooldown.has(M_AUTHOR.id) ){
-                message.channel.send(":x: You must wait "+ getTimeLeft(M_AUTHOR, msgCooldown) +" before using $message again")
+                message.channel.send(`:x: You must wait ${getTimeLeft(M_AUTHOR, msgCooldown)} before using $message again.`)
                 break
             }
 
             // Check if the call had a message recipient
             if( !args[1] ){
-                response = "you must specify who to DM. Just write their name, don\'t @ them"
+                response = `you must specify who to DM. Just write their name, don't @ them`
                 break
             }
 
@@ -364,7 +440,7 @@ client.on('message', message=>{
 
             // If the message recipient didn't match anyone in the registry, send error message
             if( !foundUser ){
-                response = ":x: could\'t find user with that name. The bot goes off names, not @'s"
+                response = `:x: could't find user with that name. The bot goes off names, not @'s`
                 break
             }
 
@@ -378,7 +454,7 @@ client.on('message', message=>{
             if( !hasMentions() ){break}
 
             if( muteCooldown.has(M_AUTHOR.id) ){
-                response = ":x: You must wait "+ getTimeLeft(M_AUTHOR, muteCooldown) +" before using $mute again."
+                response = `:x: You must wait ${getTimeLeft(M_AUTHOR, muteCooldown)} before using $mute again.`
                 break
             }
 
@@ -388,7 +464,7 @@ client.on('message', message=>{
             if( !isInCall(personToMute) ) {break}
 
             messageTarget = getTargetName(personToMute)
-            serverTempMute(personToMute)
+            serverTempMute(personToMute, '10')
             
             
             startCoolDown(M_AUTHOR, muteCooldown, cooldownTime)
@@ -401,7 +477,7 @@ client.on('message', message=>{
             if( !hasMentions() ){break}
             
             if ( bootCooldown.has(M_AUTHOR.id) ){
-                response = ":x: You must wait "+ getTimeLeft(M_AUTHOR, bootCooldown) +" before using $boot again."
+                response = `:x: You must wait ${getTimeLeft(M_AUTHOR, bootCooldown)} before using $boot again.`
                 break
             }
 
@@ -413,9 +489,18 @@ client.on('message', message=>{
             messageTarget = getTargetName(personToBoot)
             personToBoot.voice.setMute(false)
             personToBoot.voice.setChannel(null)
-            response = 'bye bye \''+ getTargetName(personToBoot)+'\' !!'
+            response = `bye bye '${getTargetName(personToBoot)}' !!`
 
             startCoolDown(M_AUTHOR, bootCooldown, cooldownTime)
+            break
+
+        case 'roll':
+        case 'rollm':
+            roll(args[0])
+            break
+
+        case 'rollb':
+            roll(args[0])
             break
 
         case 'setnick':
@@ -447,14 +532,14 @@ client.on('message', message=>{
             }
             // Check if user calling $setNick used $setNick recently
             if ( nickCooldown.has(M_AUTHOR.id) ){
-                message.channel.send(":x: You must wait "+ getTimeLeft(M_AUTHOR, nickCooldown) +" before using $setNick again.")
+                message.channel.send(`:x: You must wait ${getTimeLeft(M_AUTHOR, nickCooldown)} before using $setNick again.`)
                 break
             }
 
             let personToChange = message.guild.member( message.mentions.users.first() )
 
             if( isRole(personToChange, config.botRole) || isRole(personToChange, config.adminRole) ){
-                message.channel.send(':x: you can\'t do that to him, he\'s built different')
+                message.channel.send(`:x: you can't do that to him, he's built different`)
                 break
             }
 
@@ -462,8 +547,12 @@ client.on('message', message=>{
 
             let OGNickName = getTargetName(personToChange)
             personToChange.setNickname( fullNickName )
-            response = OGNickName+ " is now: "+fullNickName+"!!"
-
+            if( OGNickName == fullNickName ){
+                response = `'${OGNickName}' is still: '${fullNickName}' !!`
+                break;
+            }
+            
+            response = `'${OGNickName}' is now: '${fullNickName}' !!`
             startCoolDown(M_AUTHOR, nickCooldown, cooldownTime)
             break;
 
@@ -498,6 +587,22 @@ client.on('message', message=>{
             response = ""
             for(let key in quotesList_Dict){
                 if( args[0] == key ){
+                    if(args[1] == "all"){
+                        if( !messageSentInGuild() ){break}
+                        if( !isRole(message.member, config.adminRole) ){ 
+                            response = ":x: Only jack can call this command. It's too taxing on the bot for just anyone to use it"
+                            break
+                        }
+
+                        let index = 1
+                        while(index <= quotesList_Dict[key].length){
+                            message.channel.send( `.$${key} ${index}: ${sayQuote( quotesList_Dict[key], index, key )}` )
+                            ++index
+                        }
+                        message.channel.send("$refresh")
+                        response = ":white_check_mark: **Done**"
+                        break
+                    }
                     response = sayQuote( quotesList_Dict[key], args[1], key )
                     break
                 }
