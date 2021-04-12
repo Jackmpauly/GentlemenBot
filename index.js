@@ -151,13 +151,17 @@ client.on('message', message=>{
     }
 
 
+    // Roll a random mute or boot, depending on rollType
     function roll(rollType){
         if( !messageSentInGuild() ){return}
         if( !canUseBot(message.member) ){return}
 
+        // Create a set of channels under the general category (General Alpha, General Bravo, General 杰罗姆)
         const channels = message.guild.channels.cache.filter(c => c.parentID === '419336089166413825' && c.type === 'voice');
         let currentMembersArray = [];
         let allImmune = true;
+        // Add members that are in any of these channels to an array currentMembersArray
+        // Check each member for mod immunity. If all members are immune, cancel the command
         for( const [channelID, channel] of channels ){
             for( const [memberID, member] of channel.members){
                 currentMembersArray.push( member )
@@ -167,16 +171,19 @@ client.on('message', message=>{
             }
         }
 
+        // If nobody is in the call
         if( currentMembersArray.length == 0 ){
             response = ":x: Nobody is in the call D:"
             return
         }
 
+        // If all members in the call are immune
         if( allImmune ){
             response = "All call members are immune :sunglasses:"
             return
         }
 
+        // Cooldown messages
         if ( rollType == "boot" && bootRandomCooldown.has(M_AUTHOR.id) ){
             response = `:x: You must wait ${getTimeLeft(M_AUTHOR, bootRandomCooldown)} before rolling $boot again.`
             return
@@ -186,23 +193,28 @@ client.on('message', message=>{
             return
         }
 
+        // Get a random number between 0 and the number of users in the call
         let rand = Math.floor(Math.random() * currentMembersArray.length)
         // console.log(`rand: ${rand}`)
 
         let rollTarget = currentMembersArray[rand]
 
+        // If the user selected for deletion is immune, try again
         while( hasModImmunity(rollTarget, false) ){
             rand = Math.floor(Math.random() * currentMembersArray.length)
             rollTarget = currentMembersArray[rand]
         }
 
+        // If the rollType was boot, disconnect the user
         if( rollType == "boot" ){
             currentMembersArray[rand].voice.setMute(false)
             currentMembersArray[rand].voice.setChannel(null)
             response = `bye bye '${getTargetName(currentMembersArray[rand])}' !!`
             startCoolDown(M_AUTHOR, bootRandomCooldown, handicapCooldownTime)
-        }else{
-            serverTempMute(currentMembersArray[rand], '20')
+        }
+        // If the rollType was mute, mute the user for 20 seconds
+        else{
+            serverTempMute(currentMembersArray[rand], '20') // Argument must be '20' and not '20s' for the response formatting to look nice
             startCoolDown(M_AUTHOR, muteRandomCooldown, handicapCooldownTime)
         }
         // Cooldown is half of regular. This is to incentivise people to use the wacky command lol
@@ -242,6 +254,8 @@ client.on('message', message=>{
     }
 
     // Checks if user is a mod. If user is a mod, return true
+    // If modImmunity is turned off (false), then it will always return false.
+    // Takes in a boolean sendMessage for if it should respond with a message & return t/f or just return t/f
     function hasModImmunity(targetPerson, sendMessage){
         if( (isRole(targetPerson, config.adminRole) || isRole(targetPerson, config.botRole) || isRole(targetPerson, config.coAdminRole)) && modImmunity ){
             if(sendMessage){message.channel.send(':x: you can\'t do that to him, he\'s built different')}
@@ -271,6 +285,7 @@ client.on('message', message=>{
     }
 
     // Returns the name the bot should call the user. If they have a nickname, return the nickname. If not, return the user's tag (Ex: @wavy#3663)
+    // If respondwNick is off (false), then it will always return the user's tag
     function getTargetName(target){
         let targetName=``;
         if( target.nickname && respondwNick){
@@ -327,10 +342,18 @@ client.on('message', message=>{
         logActivity()
     }
 
+    function disconnectUser(target){
+        target.voice.setMute(false)
+        target.voice.setChannel(null)
+        message.channel.send(`bye bye '${getTargetName(target)}' !!`)
+        logActivity()
+    }
+
     // Quiet, Dad bot!
     if( M_AUTHOR.id === config.autoReplyID){
         message.channel.send(config.autoReplyContent + `${M_AUTHOR}`);
     }
+
     // IDEA: make it so that on message send, if the message send was a rhythm bot command (eg: !p ) and it was sent in a channel other than #radio,
     // redirect the user to the radio channel  
 
@@ -339,6 +362,8 @@ client.on('message', message=>{
 
         // Basic commands
 
+
+        // First 3 (tts, immunity, useNick/usenick) are for turning on/off tts, mod immunity, and responding with nicknames
         case 'tts':
             textToSpeech = !textToSpeech;
             if( textToSpeech ){
@@ -359,6 +384,7 @@ client.on('message', message=>{
             }
             break
 
+        case 'usenick':
         case 'useNick':
             if( !messageSentInGuild() ){break}
             if( !isRole(message.member, config.adminRole) && !isRole(message.member, config.botRole) && !isRole(message.member, config.coAdminRole)){break}
@@ -369,6 +395,8 @@ client.on('message', message=>{
                 response = 'Respond with nickname is **OFF**'
             }
             break
+
+
 
         // Prints the user's cooldowns
         case 'cd':
@@ -416,9 +444,9 @@ client.on('message', message=>{
             break
         case 'logs':
             let logs = ``
-            logs+=`Been Running since ${startTime}\n`
-            logs+=`${`Text-to-Speech:`.padEnd(27, " ")} ${textToSpeech}\n`
-            logs+=`${`Mod Immunity:`.padEnd(27, " ")} ${modImmunity}\n`
+            logs+=`${`Been running since`.padEnd(27, " ")}     ${startTime}\n`
+            logs+=`${`Text-to-Speech:`.padEnd(27, " ")}        ${textToSpeech}\n`
+            logs+=`${`Mod Immunity:`.padEnd(27, " ")}          ${modImmunity}\n`
             logs+=`${`Respond with nickname:`.padEnd(27, " ")} ${respondwNick}\n`
             for(let i=0; i<logsArray.length; ++i){
                 logs+=`${logsArray[i]}\n`
@@ -461,7 +489,6 @@ client.on('message', message=>{
         
         // THE MESSAGE / MUTE / BOOT / SETNICK COMMANDS
         case 'message':
-            cooldownTime = ms('2m')
             let messageToSend = ""
             var foundUser = false
 
@@ -502,13 +529,15 @@ client.on('message', message=>{
                 break
             }
 
-            startCoolDown(M_AUTHOR, msgCooldown, cooldownTime)
+            startCoolDown(M_AUTHOR, msgCooldown, '2m')
             break
 
         case 'mute':
             if( !messageSentInGuild() ){break}
             if( !canUseBot(message.member) ){break}
             if( isRole(message.member, config.handicapRole) ){cooldownTime = handicapCooldownTime}
+
+            // If the message does NOT mention someone. Call the roll command for mute
             if( !hasMentions(false) ){
                 commandCalled = 'mute (random)'
                 roll('mute')
@@ -526,7 +555,7 @@ client.on('message', message=>{
             if( !isInCall(personToMute) ) {break}
 
             messageTarget = getTargetName(personToMute)
-            serverTempMute(personToMute, '10')
+            serverTempMute(personToMute, '10') // Argument must be '10' and not '10s' for the response formatting to look nice
             
             
             startCoolDown(M_AUTHOR, muteCooldown, cooldownTime)
@@ -536,6 +565,8 @@ client.on('message', message=>{
             if( !messageSentInGuild() ){break}
             if( !canUseBot(message.member) ){break}
             if( isRole(message.member, config.handicapRole) ){cooldownTime = handicapCooldownTime}
+
+            // If the message does NOT mention someone. Call the roll command for boot
             if( !hasMentions(false) ){
                 commandCalled = 'boot (random)'
                 roll('boot')
@@ -553,10 +584,8 @@ client.on('message', message=>{
             if( !isInCall(personToBoot) ){break}
 
             messageTarget = getTargetName(personToBoot)
-            personToBoot.voice.setMute(false)
-            personToBoot.voice.setChannel(null)
-            response = `bye bye '${getTargetName(personToBoot)}' !!`
 
+            disconnectUser(personToBoot)
             startCoolDown(M_AUTHOR, bootCooldown, cooldownTime)
             break
 
@@ -570,7 +599,6 @@ client.on('message', message=>{
 
         case 'setnick':
         case 'setNick':
-            cooldownTime = '5m'
             // Check if the user is in a server for this command to work
             if( !messageSentInGuild() ){break}
 
@@ -604,8 +632,8 @@ client.on('message', message=>{
 
             let personToChange = message.guild.member( message.mentions.users.first() )
 
-            if( isRole(personToChange, config.botRole) || isRole(personToChange, config.adminRole) ){
-                message.channel.send(`:x: you can't do that to him, he's built different`)
+            if( (isRole(personToChange, config.adminRole) || isRole(personToChange, config.botRole) || isRole(personToChange, config.coAdminRole)) ){
+                response=':x: you can\'t do that to him, he\'s built different'
                 break
             }
 
@@ -613,13 +641,14 @@ client.on('message', message=>{
 
             let OGNickName = getTargetName(personToChange)
             personToChange.setNickname( fullNickName )
+
             if( OGNickName == fullNickName ){
                 response = `'${OGNickName}' is still: '${fullNickName}' !!`
                 break;
             }
             
             response = `'${OGNickName}' is now: '${fullNickName}' !!`
-            startCoolDown(M_AUTHOR, nickCooldown, cooldownTime)
+            startCoolDown(M_AUTHOR, nickCooldown, '10m') // Cooldown: 10 minutes
             break;
 
         case 'debugme':
@@ -651,8 +680,11 @@ client.on('message', message=>{
         // The quotes + simple call and response commands
         default:
             response = ""
+            // Loop through the quotesList_Dict. (the keys/ trigger phrases)
             for(let key in quotesList_Dict){
+                // If the key was found/ If the $ command used actually had a response...
                 if( args[0] == key ){
+                    // If the 2nd argument was "all", check if it was me, then print all
                     if(args[1] == "all"){
                         if( !messageSentInGuild() ){break}
                         if( !isRole(message.member, config.adminRole) ){ 
@@ -665,7 +697,6 @@ client.on('message', message=>{
                             message.channel.send( `.$${key} ${index}: ${sayQuote( quotesList_Dict[key], index, key )}` )
                             ++index
                         }
-                        message.channel.send("$refresh")
                         response = ":white_check_mark: **Done**"
                         break
                     }
