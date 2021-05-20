@@ -4,3 +4,5 @@ memberIDs.txt
 runBot.bat
 package-lock.json
 **/node_modules
+**/Discord Bot images
+**/discord emotes
