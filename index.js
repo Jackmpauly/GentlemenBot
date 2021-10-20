@@ -10,11 +10,14 @@ const { RSA_PKCS1_OAEP_PADDING } = require('constants')
 // COOLDOWN SETS
 const muteCooldown = new Map()
 const muteList     = new Map()
+const deafList     = new Map()
 const bootCooldown = new Map()
+const deafCooldown = new Map()
 const muteRandomCooldown = new Map()
 const bootRandomCooldown = new Map()
 const nickCooldown = new Map()
 const msgCooldown  = new Map()
+const canceled = new Map()
 
 
 // COOLDOWN TIMES
@@ -24,8 +27,9 @@ let cooldownTime            = defaultCooldownTime
 
 var textToSpeech = false
 var modImmunity = false;
-var respondwNick = false;
+var respondwNick = true;
 var startTime;
+let juevesCount = 0;
 
 var quotesList_Dict = {}
 
@@ -126,12 +130,14 @@ client.on('message', message=>{
     }
 
     function iterateMap(cooldown){
+        let ret = ``;
         if( cooldown.size > 0 ){
             for( let[k, v] of cooldown ){
                 let onCD = message.guild.members.cache.get(k).user;
-                return `${onCD.username.padEnd(11, " ")} ${getTimeLeft(onCD, cooldown)}\n`;
+                ret+= `${onCD.username.padEnd(11, " ")} ${getTimeLeft(onCD, cooldown)}\n`;
             }
         }
+        return ret;
     }
 
     // Function that takes in an array and an index, spits out a string
@@ -169,7 +175,7 @@ client.on('message', message=>{
 
     // Roll a random mute or boot, depending on rollType
     function roll(rollType){
-        if( !messageSentInGuild() ){return}
+        if( !messageSentInGuild(true) ){return}
         if( !canUseBot(message.member) ){return}
 
         // Create a set of channels under the general category (General Alpha, General Bravo, General 杰罗姆)
@@ -223,7 +229,7 @@ client.on('message', message=>{
 
         // If the rollType was boot, disconnect the user
         if( rollType == "boot" ){
-            disconnectUser(currentMembersArray[rand]);
+            disconnectUser(currentMembersArray[rand], `bye bye!!!`);
             startCoolDown(M_AUTHOR, bootRandomCooldown, defaultCooldownTime)
         }
         // If the rollType was mute, mute the user for 20 seconds
@@ -242,11 +248,11 @@ client.on('message', message=>{
     }
 
     // Checks if the message was sent in a guild. If it was, return true, else false
-    function messageSentInGuild(){
+    function messageSentInGuild(sendMessage){
         if(message.guild != null){
             return true
         }else{
-            M_AUTHOR.send(":x: This command must be sent in a server to work")
+            if(sendMessage){message.channel.send(":x: This command must be sent in a server to work")}
             return false
         }
     }
@@ -319,14 +325,14 @@ client.on('message', message=>{
 
     // Takes in a discord user, the Map they should be added to, the time they should stay in the set, and starts the cooldown for using a command
     // Maps the user to a date when the user is released from the set
-    function startCoolDown(target, cooldownSet, time){
-        if( cooldownSet.has( target.id ) ){
-            cooldownSet.delete( target.id )
+    function startCoolDown(target, cooldownMap, time){
+        if( cooldownMap.has( target.id ) ){
+            cooldownMap.delete( target.id )
         }
-        cooldownSet.set( target.id, new Date( (new Date()).getTime() + time) )
+        cooldownMap.set( target.id, new Date( (new Date()).getTime() + time) )
         setTimeout(() => {
             // Removes the target from the set after time
-            cooldownSet.delete( target.id )
+            cooldownMap.delete( target.id )
         }, time)
 
     }
@@ -336,11 +342,11 @@ client.on('message', message=>{
         let temp = diff_minutes( new Date(), cooldownSet.get(target.id) )
         let ret = ""
         if(temp == 0){
-            ret = "less than 1 minute left"
+            ret = "less than 1 minute"
         }else if(temp == 1){
-            ret = "1 minute left"
+            ret = "1 minute"
         }else{
-            ret = temp+" minutes left"
+            ret = temp+" minutes"
         }
         return ret;
     }
@@ -365,10 +371,29 @@ client.on('message', message=>{
         logActivity()
     }
 
-    function disconnectUser(target){
+    function serverTempDeaf(target, time){
+        target.voice.setDeaf(true)
+        deafList.set( target.id, new Date() )
+        message.channel.send( `'${getTargetName(target)}' has been server deafened for ${time} seconds`)
+
+        setTimeout(function(){
+            if( target.voice.channel ){
+                target.voice.setDeaf(false)
+                deafList.delete( target.id )
+                message.channel.send( '\''+getTargetName(target)+'\' has been undeafened')
+            }else{
+                deafList.delete( target.id )
+                message.channel.send( '\''+getTargetName(target)+'\' has been taken off the deafen list')
+            }
+        }, ms(time+'s') )
+
+        logActivity()
+    }
+
+    function disconnectUser(target, bootText){
         target.voice.setMute(false)
         target.voice.setChannel(null)
-        message.channel.send(`bye bye '${getTargetName(target)}' !!`)
+        message.channel.send(bootText)
         logActivity()
     }
 
@@ -376,6 +401,13 @@ client.on('message', message=>{
     if( M_AUTHOR.id === config.autoReplyID){
         message.channel.send(config.autoReplyContent + `${M_AUTHOR}`);
     }
+
+    // Canceled!!!!
+    if( messageSentInGuild(false) && canceled.has( message.guild.members.cache.get(M_AUTHOR.id) ) ){
+        message.reply(` you are ${canceled.get(message.guild.members.cache.get(M_AUTHOR.id))}`);
+        canceled.delete( message.guild.members.cache.get(M_AUTHOR.id) )
+    }
+
 
     // IDEA: make it so that on message send, if the message send was a rhythm bot command (eg: !p ) and it was sent in a channel other than #radio,
     // redirect the user to the radio channel  
@@ -395,7 +427,7 @@ client.on('message', message=>{
             break
 
         case 'immunity':
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             if( isModCommand(message.member) ){break}
             modImmunity = !modImmunity;
             if( modImmunity ){
@@ -407,13 +439,33 @@ client.on('message', message=>{
 
         case 'usenick':
         case 'useNick':
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             if( isModCommand(message.member) ){break}
             respondwNick = !respondwNick;
             if( respondwNick ){
                 response = 'Respond with nickname is **ON**'
             }else{
                 response = 'Respond with nickname is **OFF**'
+            }
+            break
+
+        // Misc complicated commands
+        case 'jueves':
+            let day = new Date().getDay();
+            if( day === 4 ){
+                if( juevesCount == 0 ){
+                    message.channel.send(`🥳🎉🎈 FELIZ JUEVES, GENTLEMEN!!!!! 🎈🎉🥳\n 💃🏼 AFTER 6 LONG DAYS, WE'VE FINALLY MADE IT 💃🏼`);
+                }
+                juevesCount++;
+                response = sayQuote( quotesList_Dict["jueves"], args[1], "jueves" )
+                
+            }else if( day === 2 || day === 3){
+                juevesCount = 0;
+                response = 'https://i.imgur.com/scXCY8u.jpg'
+            }else{
+                juevesCount = 0;
+                // response = 'https://i.imgur.com/Ihs2N1T.mp4'
+                response = 'https://i.imgur.com/LQ4hXGa.jpg'
             }
             break
 
@@ -425,6 +477,9 @@ client.on('message', message=>{
             var str = ""
             if( muteCooldown.has(M_AUTHOR.id) ){
                 str+= `${"$mute:".padEnd(11, " ")} ${getTimeLeft(M_AUTHOR, muteCooldown)}\n`
+            }
+            if( deafCooldown.has(M_AUTHOR.id) ){
+                str+= `${"$deafen:".padEnd(11, " ")} ${getTimeLeft(M_AUTHOR, deafCooldown)}\n`
             }
             if( bootCooldown.has(M_AUTHOR.id) ){
                 str+= `${"$boot:".padEnd(11, " ")} ${getTimeLeft(M_AUTHOR, bootCooldown)}\n`
@@ -457,6 +512,10 @@ client.on('message', message=>{
             if( muteCooldown.size > 0 ){
                 resp+=`$mute cooldowns:\n`
                 resp+=iterateMap( muteCooldown );
+            }
+            if( deafCooldown.size > 0 ){
+                resp+=`$deafen cooldowns:\n`
+                resp+=iterateMap( deafCooldown );
             }
             if( bootCooldown.size > 0 ){
                 resp+=`$boot cooldowns:\n`
@@ -513,24 +572,27 @@ client.on('message', message=>{
             break
 
         case 'refresh':
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             if( !isRole(message.member, config.adminRole) && !isRole(message.member, config.botRole) ){break}
             response = '**~quotes refreshed~**'
             refresh()
             break
         
         case 'reset':
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             if( isModCommand(message.member) ){break}
             response = ' :rotating_light: **~COOLDOWNS RESET~** :rotating_light: '
             muteCooldown.clear();
             muteList.clear();
+            deafCooldown.clear();
+            deafList.clear();
             bootCooldown.clear();
             muteRandomCooldown.clear();
             bootRandomCooldown.clear();
             nickCooldown.clear();
             msgCooldown.clear();
             break
+        
 
         // Make a "repeat after me" function that also deletes the message of the person who called it
         case 'say':
@@ -595,7 +657,7 @@ client.on('message', message=>{
             break
 
         case 'mute':
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             if( !canUseBot(message.member) ){break}
             if( isRole(message.member, config.botRole) ){break}
             if( isRole(message.member, config.handicapRole) ){cooldownTime = handicapCooldownTime}
@@ -620,12 +682,63 @@ client.on('message', message=>{
             commandBody = ` on '${getTargetName(personToMute)}'`
             serverTempMute(personToMute, '10') // Argument must be '10' and not '10s' for the response formatting to look nice
             
-            
             startCoolDown(M_AUTHOR, muteCooldown, cooldownTime)
+            break;
+        
+        case 'selfdeafen':
+        case 'deafenme':
+            if( !messageSentInGuild(true) ){break}
+            if( !canUseBot(message.member) ){break}
+            let selfDeaf = message.guild.members.cache.get(M_AUTHOR.id); // set self as person to deafen
+
+            if( deafList.has(selfDeaf.id )){
+                response = ':x: user is still on the deafenlist.'
+                break;
+            }
+
+            if( !isInCall(selfDeaf) ) {break}
+
+            selfDeaf.voice.setDeaf( !selfDeaf.voice.serverDeaf );
+            if( selfDeaf.voice.serverDeaf ){
+              response = ':white_check_mark: You are now undeafened'  
+            }else{
+                response = ':white_check_mark: You are now deafened'
+            }
+            
+            break;
+        case 'deafen':
+            if( !messageSentInGuild(true) ){break}
+            if( !canUseBot(message.member) ){break}
+            if( isRole(message.member, config.botRole) ){break}
+            if( isRole(message.member, config.handicapRole) ){cooldownTime = handicapCooldownTime}
+
+            // If the message does NOT mention someone. Call the roll command for deafen
+            if( !hasMentions(false) ){
+                response = ':x: deafen requires a target'
+                // commandCalled = 'deafen (random)'
+                // roll('deafen')
+                break
+            }
+
+            if( deafCooldown.has(M_AUTHOR.id) ){
+                response = `:x: You must wait ${getTimeLeft(M_AUTHOR, deafCooldown)} before using $deafen again.`
+                break
+            }
+
+            let personToDeaf = message.guild.member( message.mentions.users.first() )
+
+            if( hasModImmunity(personToDeaf, true) ){break}
+            if( !isInCall(personToDeaf) ) {break}
+
+            commandBody = ` on '${getTargetName(personToDeaf)}'`
+            serverTempDeaf(personToDeaf, '10') // Argument must be '10' and not '10s' for the response formatting to look nice
+            
+            
+            startCoolDown(M_AUTHOR, deafCooldown, cooldownTime)
             break;
 
         case 'boot':
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             if( !canUseBot(message.member) ){break}
             if( isRole(message.member, config.botRole) ){break}
             if( isRole(message.member, config.handicapRole) ){cooldownTime = handicapCooldownTime}
@@ -645,19 +758,33 @@ client.on('message', message=>{
 
             let personToBoot = message.guild.member( message.mentions.users.first() )
 
+            // Check if the user had a boot text to set
+            // Creates the boot text with spaces and all
+            let bootMessage = "";
+            for(let i=2; i<args.length; i++){
+                bootMessage+=args[i]+" "
+            }
+
+            bootMessage=bootMessage.trim()
+            
+            if( bootMessage=="" ){
+                bootMessage = `bye bye ${getTargetName(personToBoot)} :bangbang:`
+            }
+            
+
             if( hasModImmunity(personToBoot, true) ){break}
             if( !isInCall(personToBoot) ){break}
 
             commandBody = ` on '${getTargetName(personToBoot)}'`
 
-            disconnectUser(personToBoot)
+            disconnectUser(personToBoot, bootMessage)
             startCoolDown(M_AUTHOR, bootCooldown, cooldownTime)
             break
 
         case 'setnick':
         case 'setNick':
             // Check if the user is in a server for this command to work
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
 
             if( !canUseBot(message.member) ){break}
             if( isRole(message.member, config.botRole) ){break}
@@ -708,26 +835,78 @@ client.on('message', message=>{
             response = `'${OGNickName}' is now: '${fullNickName}' !!`
             startCoolDown(M_AUTHOR, nickCooldown, ms('5m')) // Cooldown: 5 minutes
             break;
+
+        // $cancel
+        case 'cancel':
+            // Check if the user is in a server for this command to work
+            if( !messageSentInGuild(true) ){break}
+            if( !canUseBot(message.member) ){break}
+            if( isRole(message.member, config.botRole) ){break}
+            // Check if the user actually mentioned another user in the message
+            if( !hasMentions() ){break}
+
+            // Check if the user had a cancel reason to set
+            // Creates the cancel reason with spaces and all
+            let cancelReason = "";
+            for(let i=2; i<args.length; i++){
+                cancelReason+=args[i]+" "
+            }
+
+            cancelReason=cancelReason.trim()
+            
+            if( cancelReason=="" ){
+                cancelReason = "CANCELED :bangbang:"
+            }else{
+                if( cancelReason.substr(0, 4) == "for " ){
+                    cancelReason = cancelReason.substr(4).trim();
+                }
+                cancelReason="CANCELED for "+cancelReason+" :bangbang:"
+            }
+
+            let personToCancel = message.guild.member( message.mentions.users.first() )
+            commandBody = ` on '${personToCancel.user.tag}'`
+
+            // Bot cannot be canceled. This would cause too many feedback loops
+            if( !isRole(personToCancel, config.botRole) ){
+                canceled.set(personToCancel, cancelReason);
+                response = `${getTargetName(personToCancel)} has been ${cancelReason}`
+                break;
+            }else{
+                response = `WHAT! I have been ${cancelReason}`
+                break;
+            }
+            break;
+
         case 'unmute':
         case 'debugme':
             // Check if the user is in a server for this command to work
-            if( !messageSentInGuild() ){break}
+            if( !messageSentInGuild(true) ){break}
             
-            let debugTarget = message.guild.members.cache.get(M_AUTHOR.id);
-            if( !isInCall(debugTarget) ){break}
+            let M_AUTHOR_GUILDMEMBER = message.guild.members.cache.get(M_AUTHOR.id);
+            
 
-            if( !(debugTarget.voice.serverMute && !muteList.has(debugTarget.id)) ){
+            if( !isInCall(M_AUTHOR_GUILDMEMBER) ){break}
+
+            if( !(M_AUTHOR_GUILDMEMBER.voice.serverMute && !muteList.has(M_AUTHOR_GUILDMEMBER.id)) ){
                 message.channel.send(':x: user is already unmuted or is still on the mute list')
-                break
+            }else{
+                M_AUTHOR_GUILDMEMBER.voice.setMute(false);
+                response = ':white_check_mark: user has been unmuted'
             }
 
-            debugTarget.voice.setMute(false);
-            response = 'user has been unmuted'
+            if( !(M_AUTHOR_GUILDMEMBER.voice.serverDeaf && !deafList.has(M_AUTHOR_GUILDMEMBER.id)) ){
+                message.channel.send(':x: user is already undeafened or is still on the deafen list')
+            }else{
+                M_AUTHOR_GUILDMEMBER.voice.setDeaf(false);
+                response = ':white_check_mark: user has been undeafened'
+            }
 
             break;
         case 'test':
-            if( isModCommand(message.member) ){break}
-            
+            if( isModCommand(message.member) ){break}    
+            // response = sayQuote( quotesList_Dict["jueves"], args[1], "jueves" )
+
+            // let crash = message.guild.members.cache.get(M_AUTHOR.id);
 
             // TODO: figure out how to make a discord embedded message. Those are cool
             // const ListEmbed = new Discord.MessageEmbed()
@@ -745,7 +924,7 @@ client.on('message', message=>{
                 if( args[0] == key ){
                     // If the 2nd argument was "all", check if it was me, then print all
                     if(args[1] == "all"){
-                        if( !messageSentInGuild() ){break}
+                        if( !messageSentInGuild(true) ){break}
                         if( !isRole(message.member, config.adminRole) ){ 
                             response = ":x: Only jack can call this command. It's too taxing on the bot for just anyone to use it"
                             break
