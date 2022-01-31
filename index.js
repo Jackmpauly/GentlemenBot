@@ -13,6 +13,7 @@ const muteList     = new Map()
 const deafList     = new Map()
 const bootCooldown = new Map()
 const deafCooldown = new Map()
+const timeoutCooldown = new Map()
 const muteRandomCooldown = new Map()
 const bootRandomCooldown = new Map()
 const nickCooldown = new Map()
@@ -397,10 +398,24 @@ client.on('message', message=>{
         logActivity()
     }
 
+    // function timeoutUser(target, reason){
+    //     target.timeout( ms("10s"), reason )
+    //     logActivity()
+    // }
+
     // Quiet, Dad bot!
     if( M_AUTHOR.id === config.autoReplyID){
         message.channel.send(config.autoReplyContent + `${M_AUTHOR}`);
     }
+
+    if(  message.content === "Permission" || message.content === "permission" || message.content === "Permission?" || message.content === "permission?" ){
+        if( M_AUTHOR.id === config.evanID ){
+            message.channel.send("Granted");
+        }else{
+            message.channel.send("PERMISSION DENIED");
+        }
+    }
+    
 
     // Canceled!!!!
     if( messageSentInGuild(false) && canceled.has( message.guild.members.cache.get(M_AUTHOR.id) ) ){
@@ -474,6 +489,7 @@ client.on('message', message=>{
         // Prints the user's cooldowns
         case 'cd':
         case 'cooldown':
+            if( !messageSentInGuild(true) ){break}
             var str = ""
             if( muteCooldown.has(M_AUTHOR.id) ){
                 str+= `${"$mute:".padEnd(11, " ")} ${getTimeLeft(M_AUTHOR, muteCooldown)}\n`
@@ -508,6 +524,7 @@ client.on('message', message=>{
         case 'cooldowns':
         case 'cds':
         case 'allCD':
+            if( !messageSentInGuild(true) ){break}
             let resp = "";
             if( muteCooldown.size > 0 ){
                 resp+=`$mute cooldowns:\n`
@@ -736,6 +753,49 @@ client.on('message', message=>{
             
             startCoolDown(M_AUTHOR, deafCooldown, cooldownTime)
             break;
+
+        case 'timeout':
+            break
+            if( !messageSentInGuild(true) ){break}
+            if( !canUseBot(message.member) ){break}
+            if( isRole(message.member, config.botRole) ){break}
+            cooldownTime = ms("2h")
+            if( isRole(message.member, config.handicapRole) ){cooldownTime = ms("1h") }
+
+            // If the message does NOT mention someone...
+            if( !hasMentions(false) ){
+                response = ':x: timeout requires a target'
+                break
+            }
+
+            if ( timeoutCooldown.has(M_AUTHOR.id) ){
+                response = `:x: You must wait ${getTimeLeft(M_AUTHOR, timeoutCooldown)} before using $timeout again.`
+                break
+            }
+
+            let personToTimeout = message.guild.member( message.mentions.users.first() )
+
+            // Check if the user had a timeout text to set
+            // Creates the boot text with spaces and all
+            let timeoutMessage = "";
+            for(let i=2; i<args.length; i++){
+                timeoutMessage+=args[i]+" "
+            }
+
+            timeoutMessage=timeoutMessage.trim()
+            
+            if( timeoutMessage=="" ){
+                timeoutMessage = `bye bye ${getTargetName(personToTimeout)} :bangbang:`
+            }
+            
+
+            if( hasModImmunity(personToTimeout, true) ){break}
+
+            commandBody = ` on '${getTargetName(personToTimeout)}'`
+
+            timeoutUser(personToTimeout, timeoutMessage)
+            startCoolDown(M_AUTHOR, timeoutCooldown, cooldownTime)
+            break
 
         case 'boot':
             if( !messageSentInGuild(true) ){break}
