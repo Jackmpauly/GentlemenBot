@@ -1,0 +1,34 @@
+function check(){
+    if( !aux.messageSentInGuild(true) ){return}
+    if( !aux.isRole(message.member, config.adminRole) && !aux.isRole(message.member, config.botRole) ){return}
+    return refresh()
+}
+
+function refreshMemberIDs(){
+    fs.readFile(config.memberIDsTxt, 'utf8', (err, data) => {
+        if(err) throw err;
+        var text = data.toString().split('\n')
+
+        var tmp;
+        for(let i=0; i<text.length; ++i){
+            tmp = text[i].split('|')
+            memberIDs_Dict[ tmp[0] ] = tmp[1];
+        }
+
+    })
+}
+
+function refresh(){
+    fs.readFile('../Discord Bot/'+config.quotesTxt, 'utf8', (err, data) => {
+        if(err) throw err;
+        var text = data.toString().split('\n')
+        quotesList_Dict = {}
+        for(let i=0; i<text.length; ++i){
+            quotesList_Dict[ text[i].substring(0, text[i].indexOf(':') ) ] = text[i].substring( text[i].indexOf(':')+1 ).split('|')
+        }
+    })
+    console.clear() // Clears console to avoid issues with communicating with the imgur server, for some reason
+    return '**~quotes refreshed~**'
+}
+
+module.exports = { check, refreshMemberIDs, refresh }
