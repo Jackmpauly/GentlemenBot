@@ -61,7 +61,7 @@ module.exports = async function (msg) {
             settings.usenick()
             break
         case 'jueves':
-            response = jueves()
+            response = jueves(args)
             break
         case 'cooldown':
         case 'cd':

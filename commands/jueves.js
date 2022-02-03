@@ -1,4 +1,4 @@
-module.exports = function (){
+module.exports = function (args){
     let day = new Date().getDay();
     if( day === 4 ){
         if( juevesCount == 0 ){
