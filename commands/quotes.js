@@ -1,5 +1,5 @@
 // Checks if the $ command was a quote key. If it is, do sayQuote? or maybe return true? or maybe return the key
-function check(arg0, arg1){
+function quote(arg0, arg1){
     response = ""
     // Loop through the qDict. (the keys/ trigger phrases)
     for(let key in quotesList_Dict){
@@ -58,4 +58,4 @@ function sayQuote(arrayText, sayQuoteArg){
 }
 
 
-module.exports = { check, sayQuote }
+module.exports = { quote, sayQuote }

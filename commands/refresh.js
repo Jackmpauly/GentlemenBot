@@ -1,7 +1,7 @@
-function check(){
+function refresh(){
     if( !aux.messageSentInGuild(true) ){return}
     if( !aux.isRole(message.member, config.adminRole) && !aux.isRole(message.member, config.botRole) ){return}
-    return refresh()
+    return refreshQuotes()
 }
 
 function refreshMemberIDs(){
@@ -18,7 +18,7 @@ function refreshMemberIDs(){
     })
 }
 
-function refresh(){
+function refreshQuotes(){
     fs.readFile('../Discord Bot/'+config.quotesTxt, 'utf8', (err, data) => {
         if(err) throw err;
         var text = data.toString().split('\n')
@@ -31,4 +31,4 @@ function refresh(){
     return '**~quotes refreshed~**'
 }
 
-module.exports = { check, refreshMemberIDs, refresh }
+module.exports = { refresh, refreshMemberIDs, refreshQuotes }

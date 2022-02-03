@@ -4,9 +4,9 @@ client = new Discord.Client()
 
 require('./global.js')
 
-refresh.refreshMemberIDs()
-
-refresh.refresh()
+// Upon starting the bot, fill these dictionaries
+refresh.refreshMemberIDs() // read the member ids text file and store to global variable "memberIDs_Dict"
+refresh.refreshQuotes() // read the quotes text file and store to global variable "quotesList_Dict"
 
 client.on('ready', () =>{
     THEGENTLEMEN_GUILD = client.guilds.cache.get(config.guild)

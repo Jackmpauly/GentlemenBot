@@ -1,4 +1,4 @@
-function check(args){
+function boot(args){
     if( !aux.messageSentInGuild(true) ){return}
     if( !aux.canUseBot(message.member) ){return}
     if( aux.isRole(message.member, config.botRole) ){return}
@@ -47,4 +47,4 @@ function disconnectUser(target, bootText){
     log.logActivity()
 }
 
-module.exports = { check, disconnectUser }
+module.exports = { boot, disconnectUser }

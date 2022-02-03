@@ -1,30 +1,31 @@
+// Import/ Require the .js files for each of the commands 
+const noprefix      = require("./commands/noPrefix.js")
+const settings      = require("./commands/botSettings.js")
+const jueves        = require("./commands/jueves.js")
+const cooldown      = require("./commands/cooldown.js")
 
-
-const settings = require("./commands/botSettings.js");
-const jueves = require("./commands/jueves.js")
-const cooldown = require("./commands/cooldown.js")
-
-const reset = require("./commands/reset.js")
-const say = require("./commands/say.js")
+const reset         = require("./commands/reset.js")
+const say           = require("./commands/say.js")
 
 const directMessage = require("./commands/DM.js")
-const mute = require("./commands/mute.js")
-const deafen = require("./commands/deafen.js")
-const boot = require("./commands/boot.js")
-const nickname = require("./commands/nickname.js")
+const mute          = require("./commands/mute.js")
+const deafen        = require("./commands/deafen.js")
+const boot          = require("./commands/boot.js")
+const nickname      = require("./commands/nickname.js")
 
-const cancel = require("./commands/cancel.js")
+const cancel        = require("./commands/cancel.js")
 
-const debug = require("./commands/debug.js")
-const test = require("./commands/test.js");
+const debug         = require("./commands/debug.js")
+const test          = require("./commands/test.js")
 
 module.exports = async function (msg) {
-    // The (mostly) global variables...
+    // The (mostly) global variables set up upon message sent
     message = msg
     M_AUTHOR = message.author;
     let args = "null"
     commandBody = ""
 
+    // Splitting the message by word
     if( message.content.charAt(0) == config.prefix || message.content.charAt(0) == config.prefixALT){
         args = message.content.substring(1).split(" ")
     }
@@ -33,24 +34,12 @@ module.exports = async function (msg) {
 
     let response = "" // What the bot should say in response, if anything.
 
+    // Account for bot functions that aren't called by a command (cancelled follow up & permission)
+    noprefix()
 
-    // CANCELLED !!
-    if( aux.messageSentInGuild(false) && canceled.has( message.guild.members.cache.get(M_AUTHOR.id) ) ){
-        message.reply(` you are ${canceled.get(message.guild.members.cache.get(M_AUTHOR.id))}`);
-        canceled.delete( message.guild.members.cache.get(M_AUTHOR.id) )
-    }
-
-    // PERMISSION !!
-    if(  message.content === "Permission" || message.content === "permission" || message.content === "Permission?" || message.content === "permission?" ){
-        if( M_AUTHOR.id === config.evanID ){
-            message.channel.send("Granted");
-        }else{
-            message.channel.send("PERMISSION DENIED");
-        }
-    }
-
+    // The switch-case 
     switch(args[0]){
-        case 'tts':
+        case 'tts': // Modify bot settings
             settings.tts()
             break
         case 'immunity':
@@ -60,10 +49,10 @@ module.exports = async function (msg) {
         case 'usenick':
             settings.usenick()
             break
-        case 'jueves':
+        case 'jueves': // Command for jueves, checks if today is Thursday
             response = jueves(args)
             break
-        case 'cooldown':
+        case 'cooldown': // Commands for users to check their cooldowns
         case 'cd':
             response = cooldown.cd()
             break
@@ -71,23 +60,23 @@ module.exports = async function (msg) {
         case 'cds':
             response = cooldown.cds()
             break
-        case 'logs':
+        case 'logs': // See the last 10 commands used and who called them
             response = log.logs()
             break
-        case 'refresh':
-            response = refresh.check()
+        case 'refresh': // Refresh the quotes
+            response = refresh.refresh()
             break
-        case 'reset':
+        case 'reset': // Reset all cooldowns
             response = reset()
             break
-        case 'say':
+        case 'say': // Send a message as the bot
             response = say(args)
             break
-        case 'message':
+        case 'message': // Have the bot DM someone
             response = directMessage.DM(args)
             break
-        case 'mute':
-            response = mute.check()
+        case 'mute': // The mute, deafen, boot, and setNick commands
+            response = mute.mute()
             break
         case 'selfdeafen':
         case 'deafenme':
@@ -97,29 +86,28 @@ module.exports = async function (msg) {
             response = deafen.deafen()
             break
         case 'boot':
-            response = boot.check(args)
+            response = boot.boot(args)
             break
         case 'setNick':
         case 'setnick':
             response = nickname(args)
             break
-        case 'cancel':
+        case 'cancel': // Cancelling someone
             response = cancel(args)
             break
-
-        case 'unmute':
+        case 'unmute': // Debugging and testing commands
         case 'debugme':
             response = debug()
             break
         case 'test':
             response = test.tst()
             break
-        default:
-            response = quotes.check(args[0], args[1])
+        default: // Check if the command is a part of the quotes dictionary
+            response = quotes.quote(args[0], args[1])
             break
-
     }
 
+    // If the user's message results in a command with a valid response, send the response and log the activity
     if( response ){
         message.channel.send(response)
         log.logActivity()

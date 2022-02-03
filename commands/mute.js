@@ -1,4 +1,4 @@
-function check(){
+function mute(){
     if( !aux.messageSentInGuild(true) ){return}
     if( !aux.canUseBot(message.member) ){return}
     if( aux.isRole(message.member, config.botRole) ){return}
@@ -95,4 +95,4 @@ function serverTempMute(target, time){
     log.logActivity()
 }
 
-module.exports = { check, serverTempMute }
+module.exports = { mute, serverTempMute }
