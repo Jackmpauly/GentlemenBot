@@ -16,7 +16,7 @@ const nickname      = require("./commands/nickname.js")
 const cancel        = require("./commands/cancel.js")
 
 const debug         = require("./commands/debug.js")
-const test          = require("./commands/test.js")
+const mimic         = require("./commands/mimic.js")
 
 module.exports = async function (msg) {
     // The (mostly) global variables set up upon message sent
@@ -40,14 +40,14 @@ module.exports = async function (msg) {
     // The switch-case 
     switch(args[0]){
         case 'tts': // Modify bot settings
-            settings.tts()
+            response = settings.tts()
             break
         case 'immunity':
-            settings.immunity()
+            response = settings.immunity()
             break
         case 'useNick':
         case 'usenick':
-            settings.usenick()
+            response = settings.usenick()
             break
         case 'jueves': // Command for jueves, checks if today is Thursday
             response = jueves(args)
@@ -71,6 +71,9 @@ module.exports = async function (msg) {
             break
         case 'say': // Send a message as the bot
             response = say(args)
+            break
+        case 'mimic': // Send a message as anyone else
+            response = mimic(args)
             break
         case 'message': // Have the bot DM someone
             response = directMessage.DM(args)
@@ -100,7 +103,6 @@ module.exports = async function (msg) {
             response = debug()
             break
         case 'test':
-            response = test.tst()
             break
         default: // Check if the command is a part of the quotes dictionary
             response = quotes.quote(args[0], args[1])
@@ -108,7 +110,7 @@ module.exports = async function (msg) {
     }
 
     // If the user's message results in a command with a valid response, send the response and log the activity
-    if( response ){
+    if( response && (typeof response == "string") ){
         message.channel.send(response)
         log.logActivity()
     }

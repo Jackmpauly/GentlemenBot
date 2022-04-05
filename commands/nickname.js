@@ -22,8 +22,9 @@ module.exports = function(args){
         return
     }
     if( !(fullNickName.length<=32) ){
-        message.channel.send(":x: Nickname must be 32 characters or fewer in length")
-        return
+        fullNickName = fullNickName.substring(0, 31);
+        // message.channel.send(":x: Nickname must be 32 characters or fewer in length")
+        // return
     }
     // Check if user calling $setNick used $setNick recently
     if ( nickCooldown.has(M_AUTHOR.id) ){

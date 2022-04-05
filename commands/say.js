@@ -1,4 +1,6 @@
 module.exports = function(args){
+    // Check if the user is in a server for this command to work
+    if( !aux.messageSentInGuild(true) ){return}
     message.delete()
     let res = ""
     if( args[1] ){

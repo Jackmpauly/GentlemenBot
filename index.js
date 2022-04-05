@@ -8,6 +8,7 @@ require('./global.js')
 refresh.refreshMemberIDs() // read the member ids text file and store to global variable "memberIDs_Dict"
 refresh.refreshQuotes() // read the quotes text file and store to global variable "quotesList_Dict"
 
+
 client.on('ready', () =>{
     THEGENTLEMEN_GUILD = client.guilds.cache.get(config.guild)
     client.user.setActivity(config.botActivity, { type: config.botActivityType })
@@ -16,6 +17,7 @@ client.on('ready', () =>{
     startTime+=": "
 
     log.updateLogs( `${startTime.padEnd(27, " ")} Bot online` )
+
 })
 
 const commandHandler = require('./commands')

@@ -13,9 +13,9 @@ function cd(){
     if( muteRandomCooldown.has(M_AUTHOR.id) ){
         str+= `${"$mute (random):".padEnd(11, " ")} ${aux.getTimeLeft(M_AUTHOR, muteRandomCooldown)}\n`
     }
-    if( bootRandomCooldown.has(M_AUTHOR.id) ){
-        str+= `${"$boot (random):".padEnd(11, " ")} ${aux.getTimeLeft(M_AUTHOR, bootRandomCooldown)}\n`
-    }
+    // if( bootRandomCooldown.has(M_AUTHOR.id) ){
+    //     str+= `${"$boot (random):".padEnd(11, " ")} ${aux.getTimeLeft(M_AUTHOR, bootRandomCooldown)}\n`
+    // }
     if( nickCooldown.has(M_AUTHOR.id) ){
         str+= `${"$setNick:".padEnd(11, " ")} ${aux.getTimeLeft(M_AUTHOR, nickCooldown)}\n`
     }
@@ -49,10 +49,10 @@ function cds(){
         resp+=`$mute (random) cooldowns:\n`
         resp+=aux.iterateMap( muteRandomCooldown );
     }
-    if( bootRandomCooldown.size > 0 ){
-        resp+=`$boot (random) cooldowns:\n`
-        resp+=aux.iterateMap( bootRandomCooldown );
-    }
+    // if( bootRandomCooldown.size > 0 ){
+    //     resp+=`$boot (random) cooldowns:\n`
+    //     resp+=aux.iterateMap( bootRandomCooldown );
+    // }
     if( nickCooldown.size > 0 ){
         resp+=`$setNick cooldowns:\n`
         resp+=aux.iterateMap( nickCooldown );
