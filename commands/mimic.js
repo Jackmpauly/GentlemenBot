@@ -3,16 +3,17 @@ const config = require('../config.json');
 module.exports = async function(args){
 	// Check if the user is in a server for this command to work
     if( !aux.messageSentInGuild(true) ){return}
-	message.delete()
+	message.delete() // After checking to see if the message is in the guild, delete the user's message.
 
+	// Standard checks...
     if( !aux.canUseBot(message.member) ){return}
     if( aux.isRole(message.member, config.botRole) ){return}
-    // Check if the user actually mentioned another user in the message
     if( !aux.hasMentions() ){return}
+	if( message.channel.id === config.thoughtsId ){return} // prevents the user from sending a mimic into the thoughts channel
 
+	// Setting target and redefining the guild
 	const guild = client.guilds.cache.get(config.guild);
 	let personToMimic = message.guild.member( message.mentions.users.first() );
-
 	
 	// Check if the user had a message to mimic
     // Creates the full message with spaces and all
@@ -21,17 +22,16 @@ module.exports = async function(args){
         mimicMessage+=args[i]+" "
     }
 
-    mimicMessage=mimicMessage.trim()
+    mimicMessage=mimicMessage.trim() // removing the extra spaces
     
 	// Don't do anything if no message is given. to prevent embarassment
     if( mimicMessage=="" ){
         return
     }
-	commandBody += " "+mimicMessage
-
+	commandBody += " "+mimicMessage // for the logs
 	log.logActivity();
 
-	// SEND WEBHOOK HERE
+	// SENDING WEBHOOK HERE
     try {
 		const webhooks = await guild.fetchWebhooks();
 		const webhook = webhooks.find(wh => wh.token);
