@@ -1,4 +1,4 @@
-const config = require('../config.json');
+const config = require('../../config.json');
 
 module.exports = async function(args){
 	// Check if the user is in a server for this command to work
