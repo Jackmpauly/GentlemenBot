@@ -9,7 +9,6 @@ module.exports = async function(args){
     if( !aux.canUseBot(message.member) ){return}
     if( aux.isRole(message.member, config.botRole) ){return}
     if( !aux.hasMentions() ){return}
-	if( message.channel.id === config.thoughtsId ){return} // prevents the user from sending a mimic into the thoughts channel
 
 	// Setting target and redefining the guild
 	const guild = client.guilds.cache.get(config.guild);
@@ -28,7 +27,8 @@ module.exports = async function(args){
     if( mimicMessage=="" ){
         return
     }
-	commandBody += " "+mimicMessage // for the logs
+	
+	commandBody += " \""+mimicMessage.substring(0, 10) + "\" ..." // for the logs
 	log.logActivity();
 
 	// SENDING WEBHOOK HERE
