@@ -1,7 +1,7 @@
 ms = require('ms') // For nice millisecond to readable time conversions
 fs = require('fs') // For file reading
 
-config = require('../config.json') // The config file with specific server details. On Github, this should be replaced by config2.json
+config = require('./config.json') // The config file with specific server details. On Github, this should be replaced by config2.json
 
 // Global scripts used in commands throughout the scope of the bot
 aux     = require("./commands/auxillary")    // Auxillary commands such as checking validity of message
