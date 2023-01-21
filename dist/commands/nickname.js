@@ -34,7 +34,7 @@ module.exports = function(args){
 
     let personToChange = message.guild.member( message.mentions.users.first() )
 
-    if( (aux.isRole(personToChange, config.adminRole) || aux.isRole(personToChange, config.botRole) || aux.isRole(personToChange, config.coAdminRole)) ){
+    if( (aux.isRole(personToChange, config.adminRole) || aux.isRole(personToChange, config.botRole) ) ){
         return `:x: Discord.js literally does not allow for bots to change the nicknames of admins. I've done all I can. Take it up with them. \n https://stackoverflow.com/questions/56117594/discord-js-bot-dosnt-have-permission-to-manage-nicknames`
     }
 

@@ -2,6 +2,7 @@
 const noprefix      = require("./commands/noPrefix.js")
 const settings      = require("./commands/botSettings.js")
 const jueves        = require("./commands/jueves.js")
+const tracker       = require("./commands/tracker.js")
 const cooldown      = require("./commands/cooldown.js")
 
 const reset         = require("./commands/reset.js")
@@ -54,6 +55,9 @@ module.exports = async function (msg) {
             break
         case 'jueves': // Command for jueves, checks if today is Thursday
             response = jueves(args)
+            break
+        case 'mutestreak':
+            response = tracker.getMuteStreak()
             break
         case 'cooldown': // Commands for users to check their cooldowns
         case 'cd':

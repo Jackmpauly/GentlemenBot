@@ -17,6 +17,11 @@ function mute(){
 
     let personToMute = message.guild.member( message.mentions.users.first() )
 
+    // check if caller was jake and target was varunjit
+    if (M_AUTHOR.id == '382068156346138625' && personToMute.id == '270709912001052672'){
+        tracker.incrementMuteStreak()
+    }
+
     if( aux.hasModImmunity(personToMute, true) ){return}
     if( !aux.isInCall(personToMute) ) {return}
 

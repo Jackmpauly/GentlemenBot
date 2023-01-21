@@ -8,6 +8,7 @@ aux     = require("./commands/auxillary")    // Auxillary commands such as check
 refresh = require("./commands/refresh.js")      // Refreshing/Fetching the quotes/member ids 
 log     = require("./commands/updateLogs.js")   // The command logs
 quotes  = require("./commands/quotes.js");      // The quotes
+tracker = require("./commands/tracker.js");
 
 // The Lists/Maps that map users to their time in the map.
 // Used for timing out users, cooldown times, etc.
