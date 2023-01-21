@@ -1,6 +1,6 @@
 const fs = require('fs')
 trk = require('../../txt/tracker.json')
-var numDays = trk.getMuteStreak;
+var numDays = trk.jakewebs_mutestreak;
 var lastMessageDate = trk.mutestreak_lastmessage
 
 function getMuteStreak() {
@@ -37,7 +37,7 @@ function writeToJSON(newNumDays, newDate) {
         mutestreak_lastmessage:newDate
     }
 
-    fs.writeFile('txt/tracker.json', JSON.stringify(newObject), err => {
+    fs.writeFile('../txt/tracker.json', JSON.stringify(newObject), err => {
         if (err){
             console.log(err)
         } else {
@@ -48,7 +48,7 @@ function writeToJSON(newNumDays, newDate) {
 
 function readTrackerFile() {
     try {
-        const jsonString = fs.readFileSync('txt/tracker.json', 'utf-8');
+        const jsonString = fs.readFileSync('../txt/tracker.json', 'utf-8');
         const data = JSON.parse(jsonString);
         numDays = data.jakewebs_mutestreak
         lastMessageDate = data.mutestreak_lastmessage
