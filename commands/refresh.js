@@ -19,7 +19,7 @@ function refreshMemberIDs(){
 }
 
 function refreshQuotes(){
-    fs.readFile('../Discord Bot/'+config.quotesTxt, 'utf8', (err, data) => {
+    fs.readFile(config.quotesTxt, 'utf8', (err, data) => {
         if(err) throw err;
         var text = data.toString().split('\n')
         quotesList_Dict = {}
