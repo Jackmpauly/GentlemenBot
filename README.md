@@ -9,4 +9,16 @@ This is just a little project I've been making on my own time as sort of a chall
 
 Also, I want to put a little disclaimer out there that I am new to javascript, so if some parts look sloppy or could be done better, bear with me and let me know!
 
-Also also, I'm like 99% sure this project cannot be forked and used out of the box at the moment. I've been developing this project on my machine, for my machine and haven't tested portability yet.
+## Running
+
+To generate a new `config.json`:
+
+```shell
+node index.js --dump-config > config.json
+```
+
+Then:
+
+```
+node index.js
+```
