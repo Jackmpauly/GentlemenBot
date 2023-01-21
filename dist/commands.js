@@ -20,6 +20,8 @@ const cancel        = require("./commands/cancel.js")
 const debug         = require("./commands/debug.js")
 const mimic         = require("./commands/mimic.js")
 
+const help          = require("./commands/help.js")
+
 module.exports = async function (msg) {
     // The (mostly) global variables set up upon message sent
     message = msg
@@ -111,6 +113,9 @@ module.exports = async function (msg) {
         case 'unmute': // Debugging and testing commands
         case 'debugme':
             response = debug()
+            break
+        case 'help':
+            response = help(args)
             break
         case 'test':
             break

@@ -1,6 +1,6 @@
 const fs = require('fs')
 trk = require('../../txt/tracker.json')
-var numDays = 0;
+var numDays = trk.getMuteStreak;
 var lastMessageDate = trk.mutestreak_lastmessage
 
 function getMuteStreak() {
