@@ -14,6 +14,7 @@ quotes  = require("./commands/quotes.js");      // The quotes
 muteCooldown = new Map()
 muteList     = new Map()
 deafList     = new Map()
+remindList   = new Map()
 bootCooldown = new Map()
 deafCooldown = new Map()
 muteRandomCooldown = new Map()

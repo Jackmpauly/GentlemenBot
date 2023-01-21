@@ -91,7 +91,7 @@ function serverTempMute(target, time){
             message.channel.send( '\''+aux.getTargetName(target)+'\' has been taken off the mute list')
         }
     }, ms(time+'s') )
-
+    
     log.logActivity()
 }
 

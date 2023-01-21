@@ -7,7 +7,6 @@ module.exports = function() {
     deafList.clear();
     bootCooldown.clear();
     muteRandomCooldown.clear();
-    bootRandomCooldown.clear();
     nickCooldown.clear();
     msgCooldown.clear();
     return ' :rotating_light: **~COOLDOWNS RESET~** :rotating_light: '

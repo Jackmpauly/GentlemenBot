@@ -8,6 +8,7 @@ const reset         = require("./commands/reset.js")
 const say           = require("./commands/say.js")
 
 const directMessage = require("./commands/DM.js")
+const remind        = require("./commands/remind.js")
 const mute          = require("./commands/mute.js")
 const deafen        = require("./commands/deafen.js")
 const boot          = require("./commands/boot.js")
@@ -24,6 +25,8 @@ module.exports = async function (msg) {
     M_AUTHOR = message.author;
     let args = "null"
     commandBody = ""
+    
+    if( message.channel.id === config.thoughtsId ) return // do nothing if message was sent in thoughts channel
 
     // Splitting the message by word
     if( message.content.charAt(0) == config.prefix || message.content.charAt(0) == config.prefixALT){
@@ -77,6 +80,9 @@ module.exports = async function (msg) {
             break
         case 'message': // Have the bot DM someone
             response = directMessage.DM(args)
+            break
+        case 'remind':
+            response = remind(args)
             break
         case 'mute': // The mute, deafen, boot, and setNick commands
             response = mute.mute()
