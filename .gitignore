@@ -3,6 +3,8 @@ Quotes.txt
 memberIDs.txt
 runBot.bat
 package-lock.json
+tsconfig.json
 **/node_modules
 **/Discord Bot images
 **/discord emotes
+**/txt

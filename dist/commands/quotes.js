@@ -16,9 +16,10 @@ function quote(arg0, arg1){
 }
 
 function sayAll(key){
-    if( !aux.messageSentInGuild(true) ){return}
-    if( !aux.isRole(message.member, config.adminRole) ){ 
-        return ":x: Only jack can call this command. It's too taxing on the bot for just anyone to use it"
+    if( aux.messageSentInGuild(false) ){
+        if( !aux.isRole(message.member, config.adminRole) && !aux.isRole(message.member, config.coAdminRole) ){ 
+            return ":x: Only jack can call this command. It's too taxing on the bot for just anyone to use it"
+        }
     }
 
     let index = 1

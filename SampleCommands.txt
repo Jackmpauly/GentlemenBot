@@ -1,3 +1,0 @@
-help:**you figure out the commands!!**
-test:I can say this|or say this!
-foo:bar
