@@ -1,4 +1,5 @@
 const config = require('../config.json');
+require('../global')
 
 module.exports = async function(args){
 	// Check if the user is in a server for this command to work
@@ -11,6 +12,7 @@ module.exports = async function(args){
     if( !aux.hasMentions() ){return}
 
 	// Setting target and redefining the guild
+	
 	const guild = client.guilds.cache.get(config.guild);
 	let personToMimic = message.guild.member( message.mentions.users.first() );
 	

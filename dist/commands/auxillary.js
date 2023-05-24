@@ -28,9 +28,9 @@ function hasModImmunity(targetPerson, replyWithMessage){
     return false
 }
 
-function isModCommand(targetPerson){
+function isModCommand(targetPerson, replyWithMessage){
     if( (!isRole(targetPerson, config.adminRole) && !isRole(targetPerson, config.coAdminRole)) || isRole(targetPerson, config.botRole) ){
-        message.channel.send(`:x: This is a command only mods can use`)
+        if(replyWithMessage){message.channel.send(`:x: This is a command only mods can use`)}
         return true
     }
     return false

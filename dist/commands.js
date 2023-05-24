@@ -55,6 +55,9 @@ module.exports = async function (msg) {
         case 'usenick':
             response = settings.usenick()
             break
+        case 'restrain':
+            response = settings.fileRestrainingOrder()
+            break
         case 'jueves': // Command for jueves, checks if today is Thursday
             response = jueves(args)
             break

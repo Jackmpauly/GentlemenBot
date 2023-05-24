@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "discord.js": "^12.5.1",
+    "djs-voice": "^1.2.0",
     "ms": "^2.1.2"
   },
   "devDependencies": {

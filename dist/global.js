@@ -9,6 +9,7 @@ refresh = require("./commands/refresh.js")      // Refreshing/Fetching the quote
 log     = require("./commands/updateLogs.js")   // The command logs
 quotes  = require("./commands/quotes.js");      // The quotes
 tracker = require("./commands/tracker.js");
+Discord = require('discord.js')
 
 // The Lists/Maps that map users to their time in the map.
 // Used for timing out users, cooldown times, etc.
@@ -27,12 +28,14 @@ canceled = new Map()
 // Handicap cooldown is used to help commonly targeted users
 defaultCooldownTime   = ms(config.defaultCooldownTime)
 handicapCooldownTime  = ms(config.handicapCooldownTime)
+mutestreakMaxTime     = ms(config.mutestreakMaxTime)
 cooldownTime          = defaultCooldownTime
 
 // Bot Settings
 textToSpeech = false
 modImmunity = false;
 respondwNick = true;
+restrainingOrder = false;
 
 startTime = 0   // The starting time for the bot. Should be a Date() object
 juevesCount = 0 // A counter for how many times $jueves has been called.
@@ -40,6 +43,10 @@ juevesCount = 0 // A counter for how many times $jueves has been called.
 // The two dictionaries storing the quotes as well as member IDs
 quotesList_Dict = {}
 memberIDs_Dict = {}
+restraining_orders_Dict = {}
 
 // The array for all logs. Should remain throughout time bot is active
 logsArray = []
+
+
+client = new Discord.Client()

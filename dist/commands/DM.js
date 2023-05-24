@@ -1,7 +1,10 @@
+require('../global')
 function DM(args){
     let messageToSend = ""
     var foundUser = false
     
+    if( !aux.messageSentInGuild(true) ){return}
+
     //Check if user calling $message used $message recently
     if( msgCooldown.has(M_AUTHOR.id) ){
         return `:x: You must wait ${aux.getTimeLeft(M_AUTHOR, msgCooldown)} before using $message again.`

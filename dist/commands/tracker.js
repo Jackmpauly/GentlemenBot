@@ -3,6 +3,10 @@ trk = require('../../txt/tracker.json')
 var numDays = trk.jakewebs_mutestreak;
 var lastMessageDate = trk.mutestreak_lastmessage
 
+// 129600000 ms = 36 hours
+// 57600000 ms = 16 hours
+// 259200000 ms = 72 hours
+
 function getMuteStreak() {
     readTrackerFile()
     if (getTimeSinceLastMute() > 129600000) {
@@ -18,6 +22,7 @@ function incrementMuteStreak() {
     rightNow = new Date( (new Date()).getTime() )
     if ( getTimeSinceLastMute() < 129600000 && getTimeSinceLastMute() > 57600000 ) {
         // Increment and change the last date if the command was entered within 16 to 36 hours of the last command
+        // TEMP CHANGE. command is 3 days
         writeToJSON(numDays+1, rightNow)
     }
 }

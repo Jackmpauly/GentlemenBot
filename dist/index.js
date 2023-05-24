@@ -17,10 +17,6 @@ if (process.argv.includes('--dump-config')) {
     "autoReplyID": "<ID OF USER TO REPLY TO>",
     "autoReplyContent": "Hi, user!",
     
-    "customMiscCommand": "hello",
-    "customMiscCommandString": "Hello world! I'm ",
-    "defaultMiscCommandArg": "Gentlemen Bot",
-    
     "defaultCooldownTime": "1h",
     "handicapCooldownTime": "30m",
     
@@ -44,14 +40,15 @@ try {
     process.exit(1)
 }
 
-const Discord = require('discord.js')
-const client = new Discord.Client()
+// const Discord = require('discord.js')
+// const client = new Discord.Client()
 
 require('./global.js')
 
 // Upon starting the bot, fill these dictionaries
 refresh.refreshMemberIDs() // read the member ids text file and store to global variable "memberIDs_Dict"
 refresh.refreshQuotes() // read the quotes text file and store to global variable "quotesList_Dict"
+refresh.refreshRestrainingOrders() // read the restraining orders csv file and store to global variable "restraining_orders_Dict""
 
 
 client.on('ready', () =>{
@@ -69,9 +66,15 @@ client.on('error', err => {
 })
 
 const commandHandler = require('./commands')
-client.on('message', commandHandler);
+client.on('message', commandHandler, client);
 client.login(config.token);
+
+const voiceStateUpdate = require('./voiceStateUpdate')
+client.on('voiceStateUpdate', voiceStateUpdate);
+
 
 process.on('exit', () => {
     console.log('Shutting down...')
 })
+
+module.exports = client;

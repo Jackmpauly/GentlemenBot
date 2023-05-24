@@ -1,6 +1,6 @@
 module.exports = function() {
     if( !aux.messageSentInGuild(true) ){return}
-    if( aux.isModCommand(message.member) ){return}
+    if( aux.isModCommand(message.member, true) ){return}
     muteCooldown.clear();
     muteList.clear();
     deafCooldown.clear();
